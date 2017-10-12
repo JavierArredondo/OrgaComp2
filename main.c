@@ -26,7 +26,7 @@ int main()
 			/* Primero se pide un archivo válido para la ejecución del programa, si este no existe, se pedrirá un nuevo archivo. */
 			printf("\nIngrese el nombre del archivo que posee las instrucciones del programa: ");
 			scanf("%s", nameInstruction);
-			fileInstr = inDirectory("code.asm");
+			fileInstr = inDirectory("ejemploMips1.asm");
 			while(!fileInstr)
 			{
 				printf(ANSI_COLOR_RED "\nNo existe tal archivo. Ingrese uno valido: " ANSI_COLOR_RESET);

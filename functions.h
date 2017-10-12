@@ -26,7 +26,7 @@ void goToLabel(Program* myProgram, Processor* myProcessor, char* myLabel);
 
 void printRegisters(Processor* myProcessor);
 
-void changeUnitControl(char a1, char a2, char a3, char a4, char a5, char* a6, char a7, char a8, char a9, UnitControl* myUniControl);
+UnitControl changeUnitControl(char a1, char a2, char a3, char a4, char a5, char* a6, char a7, char a8, char a9);
 
 void setUnitControl(char* instr, Processor* myProcessor);
 

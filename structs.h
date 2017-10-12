@@ -64,7 +64,7 @@ typedef struct Processor
 	Buffer MEM_WB;
 
 	int cycle;
-	int nop;
+	int stallB;
 
 	char* instr1;
 	char* instr2;
