@@ -1,0 +1,6 @@
+ETAPAS;C1;C2;C3;C4;C5;C6;C7;C8;C9;C10;C11;
+IF;add $t0, $t0, $t0;addi $t2, $t2, 7;beq $t0, $t2, PICO;add $t1, $t0, $t2;add $t1, $t0, $t2;;add $t0, $t0, $t0;;;;;;
+ID;;add $t0, $t0, $t0;addi $t2, $t2, 7;beq $t0, $t2, PICO;add $t1, $t0, $t2;add $t1, $t0, $t2;;add $t0, $t0, $t0;;;;;
+EX;;;add $t0, $t0, $t0;addi $t2, $t2, 7;beq $t0, $t2, PICO;add $t1, $t0, $t2;add $t1, $t0, $t2;;add $t0, $t0, $t0;;;;
+MEM;;;;add $t0, $t0, $t0;addi $t2, $t2, 7;beq $t0, $t2, PICO;add $t1, $t0, $t2;add $t1, $t0, $t2;;add $t0, $t0, $t0;;;
+WB;;;;;add $t0, $t0, $t0;addi $t2, $t2, 7;beq $t0, $t2, PICO;add $t1, $t0, $t2;add $t1, $t0, $t2;;add $t0, $t0, $t0;;

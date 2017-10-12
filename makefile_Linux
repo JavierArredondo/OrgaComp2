@@ -1,2 +1,0 @@
-all:
-	gcc -o  lectorMips.out main.c functions.c
