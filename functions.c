@@ -14,7 +14,7 @@
 # define ANSI_COLOR_CYAN    "\x1b[36m"
 # define ANSI_COLOR_RESET   "\x1b[0m"
 # define ANSI_COLORBG_GREEN "\x1b[42m"
-# define ANSI_COLORBG_YELLOW "\x1b[43m"
+# define ANSI_COLORBG_CYAN "\x1b[46m"
 
 /* Función que verifica si un archivo existe en el directorio. 
    name: Nombre del arrchivo (con extensión) que se quiere buscar en el directorio. 
@@ -347,7 +347,12 @@ void IF(Program* myProgram, Processor* myProcessor)
 	}
 	else
 		strcpy(myProcessor->instr1, "EOF");
+	printf(ANSI_COLORBG_CYAN"\nEN IF\n"ANSI_COLOR_RESET);
 	printf("IF: %s\n", myProcessor->instr1);
+	printf("ID: %s\n", myProcessor->instr2);
+	printf("EX: %s\n", myProcessor->instr3);
+	printf("MEM: %s\n", myProcessor->instr4);
+	printf("WB: %s\n", myProcessor->instr5);
 }
 
 void ID(Program* myProgram, Processor* myProcessor)
@@ -362,7 +367,16 @@ void ID(Program* myProgram, Processor* myProcessor)
 
 	sscanf(myProcessor->instr2, "%s", instruction);
 	strcpy(myProcessor->ID_EX.inst, instruction);
-	printf("ID: %s\n", myProcessor->instr1);
+	printf(ANSI_COLORBG_CYAN"\nEN ID\n"ANSI_COLOR_RESET);
+	printf("IF: %s\n", myProcessor->instr1);
+	printf("ID: %s\n", myProcessor->instr2);
+	printf("EX: %s\n", myProcessor->instr3);
+	printf("MEM: %s\n", myProcessor->instr4);
+	printf("WB: %s\n", myProcessor->instr5);
+	if(strcmp(myProcessor->instr1, "NOP") == 0)
+	{
+		printf("No debo ejecutar...\n");
+	}
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "FLUSH") == 0)
 		return;
 	else if(strcmp(myProcessor->instr1, "EOF") == 0)
@@ -395,23 +409,15 @@ void ID(Program* myProgram, Processor* myProcessor)
 	else if(strcmp(instruction, "lw") == 0)
 	{
 		//printf("Seteando: %s\n", instruction);
-		printf("b\n");
 		setUnitControl(instruction, myProcessor);
-		printf("g\n");
 		copyBuffer(&myProcessor->ID_EX, myProcessor->IF_ID); //
-		printf("f\n");
 		myProcessor->ID_EX.readData1 = getData(myProcessor->ID_EX.rs, myProcessor); //
-		printf("e\n");
 		myProcessor->ID_EX.readData2 = 0; //
-		printf("d\n");
 		strcpy(myProcessor->ID_EX.labelBranch, "0");
-		printf("c\n");
 		myProcessor->ID_EX.uc = copyUnitControl(myProcessor->uc);
-		printf("x\n");
 	}
 	else if(strcmp(instruction, "sw") == 0)
 	{
-		//printf("Seteando: %s\n", instruction);
 		setUnitControl(instruction, myProcessor);
 		copyBuffer(&myProcessor->ID_EX, myProcessor->IF_ID); //
 		myProcessor->ID_EX.readData1 = getData(myProcessor->ID_EX.rs, myProcessor); //
@@ -457,7 +463,14 @@ void EX(Program* myProgram, Processor* myProcessor)
 
 	sscanf(myProcessor->instr3, "%s", instruction);
 	strcpy(myProcessor->EX_MEM.inst, myProcessor->instr3);
+
+	printf(ANSI_COLORBG_CYAN"\nEN EX\n"ANSI_COLOR_RESET);
+	printf("IF: %s\n", myProcessor->instr1);
+	printf("ID: %s\n", myProcessor->instr2);
 	printf("EX: %s\n", myProcessor->instr3);
+	printf("MEM: %s\n", myProcessor->instr4);
+	printf("WB: %s\n", myProcessor->instr5);
+
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "FLUSH") == 0)
 	{
 		return;
@@ -549,7 +562,14 @@ void MEM(Processor* myProcessor)
 
 	sscanf(myProcessor->instr4, "%s", instruction);
 	strcpy(myProcessor->EX_MEM.inst, myProcessor->instr4);
+	
+	printf(ANSI_COLORBG_CYAN"\nEN MEM\n"ANSI_COLOR_RESET);
+	printf("IF: %s\n", myProcessor->instr1);
+	printf("ID: %s\n", myProcessor->instr2);
+	printf("EX: %s\n", myProcessor->instr3);
 	printf("MEM: %s\n", myProcessor->instr4);
+	printf("WB: %s\n", myProcessor->instr5);
+
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "EOF") == 0 || strcmp(instruction, "FLUSH") == 0)
 		return;
 
@@ -581,7 +601,14 @@ void WB(Processor* myProcessor)
 
 	sscanf(myProcessor->instr5, "%s", instruction);
 	strcpy(myProcessor->EX_MEM.inst, myProcessor->instr5);
-	printf("WB: %s\n", myProcessor->instr4);
+	
+	printf(ANSI_COLORBG_CYAN"\nEN WB\n" ANSI_COLOR_RESET);
+	printf("IF: %s\n", myProcessor->instr1);
+	printf("ID: %s\n", myProcessor->instr2);
+	printf("EX: %s\n", myProcessor->instr3);
+	printf("MEM: %s\n", myProcessor->instr4);
+	printf("WB: %s\n", myProcessor->instr5);
+
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "EOF") == 0 || strcmp(instruction, "FLUSH") == 0)
 		return;
 	if(strcmp(instruction, "add") == 0 || strcmp(instruction, "sub") == 0 || strcmp(instruction, "mul") == 0 || strcmp(instruction, "div") == 0 || strcmp(instruction, "addi") == 0 || strcmp(instruction, "subi") == 0)
@@ -598,13 +625,25 @@ char* hazardData(Processor* myProcessor)
 		return NULL;
 
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rs) == 0)
+	{
+		myProcessor->ID_EX.readData1 = myProcessor->EX_MEM.ALUresult;
 		return myProcessor->ID_EX.rs;
+	}
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rt) == 0)
+	{
+		myProcessor->ID_EX.readData2 = myProcessor->EX_MEM.ALUresult;
 		return myProcessor->ID_EX.rt;
+	}
 	if(myProcessor->MEM_WB.uc.RegWrite == '1' && strcmp(myProcessor->MEM_WB.MuxRegDst, myProcessor->ID_EX.rs) == 0)
+	{
+		myProcessor->ID_EX.readData1 = myProcessor->MEM_WB.ALUresult;
 		return myProcessor->ID_EX.rs;
+	}
 	if(myProcessor->MEM_WB.uc.RegWrite == '1' && strcmp(myProcessor->MEM_WB.MuxRegDst, myProcessor->ID_EX.rt) == 0)
+	{
+		myProcessor->ID_EX.readData2 = myProcessor->MEM_WB.ALUresult;
 		return myProcessor->ID_EX.rt;
+	}
 	return NULL;
 }
 
@@ -674,6 +713,20 @@ List* removeTrash(List* myList)
 	return myList;
 }
 
+void copyRegisters(Processor* myProcessor)
+{
+	int i;
+	for(i = 0; i < 32; i++)
+		myProcessor->previewData[i] = myProcessor->registersData[i];
+}
+
+void backRegisters(Processor* myProcessor)
+{
+	int i;
+	for(i = 0; i < 32; i++)
+		myProcessor->registersData[i] = myProcessor->previewData[i];
+}
+
 void start(Program* myProgram)
 {
 	Processor* myProcessor = initProcessor(myProgram);
@@ -686,7 +739,6 @@ void start(Program* myProgram)
 		printf("____________________\n");
 		printf(ANSI_COLORBG_GREEN"Ciclo: %i\n"ANSI_COLOR_RESET, myProcessor->cycle);
 		WB(myProcessor);
-		nop = NOP(myProcessor);
 		MEM(myProcessor);
 		EX(myProgram, myProcessor);
 		ID(myProgram, myProcessor);
@@ -696,7 +748,6 @@ void start(Program* myProgram)
 			append(myProcessor->hazardData, "-");
 			append(myProcessor->hazardControl, "-");
 			append(myProcessor->nopList, myProcessor->instr1);
-			printf("a\n");
 			strcpy(myProcessor->instr1, "NOP");
 
 			append(myProcessor->IFlist, myProcessor->instr1);
@@ -775,6 +826,7 @@ void start(Program* myProgram)
 				myProcessor->cycle++;
 			}
 		}
+		nop = NOP(myProcessor);
 	}
 	while(strcmp(finish, "EOF") != 0);
 
@@ -783,9 +835,9 @@ void start(Program* myProgram)
 	myProcessor->EXlist = removeTrash(myProcessor->EXlist);
 	myProcessor->MEMlist = removeTrash(myProcessor->MEMlist);
 	myProcessor->WBlist = removeTrash(myProcessor->WBlist);
+
+	printRegisters(myProcessor);
 	printOut(myProgram, myProcessor);
 	fclose(myProgram->instFile);
 	fclose(myProgram->registerFile);
 }
-
-// FALLA PORQUE FALTA EL POP, SE PUED ARREGLAR AL PRINCIPIO DEL IF.
