@@ -15,7 +15,6 @@
 # define ANSI_COLOR_RESET   "\x1b[0m"
 # define ANSI_COLORBG_GREEN "\x1b[42m"
 # define ANSI_COLORBG_CYAN "\x1b[46m"
-
 /* Función que verifica si un archivo existe en el directorio. 
    name: Nombre del arrchivo (con extensión) que se quiere buscar en el directorio. 
    return: Puntero al archivo.. */
@@ -316,6 +315,7 @@ void copyBuffer(Buffer* myBuffer, Buffer b2)
 	myBuffer->ADDresult = b2.ADDresult;
 	myBuffer->zero = b2.zero;
 }
+
 // 	Etapas del camino de datos:
 /* 	Para manejar cada etapa, se ha trabajado de forma conveniente para el desarrollador, se ha relacionado cada etapa con una instrucción:
 	IF->  instr1.
@@ -335,77 +335,88 @@ void copyBuffer(Buffer* myBuffer, Buffer b2)
 void IF(Program* myProgram, Processor* myProcessor)
 {
 	char instruction[64];
-	char rs[5];
-	char rt[5];
-	char rd[5];
+	char rs[10];
+	char rt[10];
+	char rd[10];
 	char label[64];
 	int inm = 0;
-	char* line = (char*)malloc(sizeof(char) * 64);
+	int flag = 0;
+	char* line = (char*)malloc(sizeof(char) * 100);
 	strcpy(line, "NONE");
 	strcpy(rs, "0");
 	strcpy(rt, "0");
 	strcpy(rd, "0");
-	if(feof(myProgram->instFile) == 0)
+	while(feof(myProgram->instFile) == 0)
 	{
 		fscanf(myProgram->instFile, "%s", instruction);
 		if(strcmp(instruction, "add") == 0 || strcmp(instruction, "sub") == 0 || strcmp(instruction, "mul") == 0 || strcmp(instruction, "div") == 0)
 		{
 			fscanf(myProgram->instFile, " %[^','], %[^','], %s", rd, rs, rt);
 			sprintf(line, "%s %s, %s, %s", instruction, rd, rs, rt);
+			flag = 1;
 		}
 		else if(strcmp(instruction, "addi") == 0)
 		{
 			fscanf(myProgram->instFile, " %[^','], %[^','], %i", rt, rs, &inm);
 			sprintf(line, "addi %s, %s, %i", rt, rs, inm);
+			flag = 1;
 		}
 		else if(strcmp(instruction, "subi") == 0)
 		{
 			fscanf(myProgram->instFile, " %[^','], %[^','], %i", rt, rs, &inm);
 			sprintf(line, "subi %s, %s, %i", rt, rs, inm);
+			flag = 1;
 		}
 		else if(strcmp(instruction, "lw") == 0 || strcmp(instruction, "sw") == 0)
 		{
 			fscanf(myProgram->instFile, " %[^','], %d(%[^')']", rt, &inm, rs);
 			fscanf(myProgram->instFile, ")");
 			sprintf(line, "%s %s, %i(%s)", instruction, rt, inm, rs);
+			flag = 1;
 		}
 		else if(strcmp(instruction, "j") == 0)
 		{
 			fscanf(myProgram->instFile, "%s", label);
 			sprintf(line, "j %s", label);
+			flag = 1;
 		}
 		else if(strcmp(instruction, "sw") == 0)
 		{
 			fscanf(myProgram->instFile, " %[^','], %d(%[^')']", rt, &inm, rs);
 			fscanf(myProgram->instFile, ")");
 			sprintf(line, "%s %s, %i(%s)", instruction, rt, inm, rs);
+			flag = 1;
 		}
 		else if(strcmp(instruction, "beq") == 0)
 		{
 			fscanf(myProgram->instFile, " %[^','], %[^','], %s", rs, rt, label);
 			sprintf(line, "beq %s, %s, %s", rs, rt, label);
+			flag = 1;
 		}
-		// SETEO DE IF_ID
-		strcpy(myProcessor->IF_ID.rs, rs);
-		strcpy(myProcessor->IF_ID.rt, rt);
-		strcpy(myProcessor->IF_ID.rd, rd);
-		myProcessor->IF_ID.signExtend = inm;
-		myProcessor->IF_ID.addPC = myProcessor->PC;
-		strcpy(myProcessor->IF_ID.inst, line);
-		// SETEO DE PROCESADOR
-		myProcessor->PC++;
-		strcpy(myProcessor->instr1, line);
+		if(flag == 1)
+		{
+			// SETEO DE IF_ID
+			strcpy(myProcessor->IF_ID.rs, rs);
+			strcpy(myProcessor->IF_ID.rt, rt);
+			strcpy(myProcessor->IF_ID.rd, rd);
+			myProcessor->IF_ID.signExtend = inm;
+			myProcessor->IF_ID.addPC = myProcessor->PC;
+			strcpy(myProcessor->IF_ID.inst, line);
+			// SETEO DE PROCESADOR
+			myProcessor->PC++;
+			strcpy(myProcessor->instr1, line);
+			return;
+		}
 	}
-	else
-		strcpy(myProcessor->instr1, "EOF");
+	strcpy(myProcessor->instr1, "EOF");
 }
 /*	Procedimiento que simlua etapa ID, setea la unidad de control con los valores correspondientes.*/
 void ID(Program* myProgram, Processor* myProcessor)
 {
 	char instruction[64];
-	char rs[5];
-	char rt[5];
-	char rd[5];
+	char rs[10];
+	char rt[10];
+	char rd[10];
 	char label[64];
 	int inm;
 	char* line = (char*)malloc(sizeof(char) * 64);
@@ -461,6 +472,8 @@ void ID(Program* myProgram, Processor* myProcessor)
 	else if(strcmp(instruction, "beq") == 0)
 	{
 		setUnitControl("beq", myProcessor);
+		copyBuffer(&myProcessor->ID_EX, myProcessor->IF_ID); //
+		printf("%s\n", myProcessor->instr2);
 		sscanf(myProcessor->instr2, "%s %[^','], %[^','], %s", instruction, rs, rt, label);
 		strcpy(myProcessor->ID_EX.labelBranch, label);
 		strcpy(myProcessor->ID_EX.rd, "0");
@@ -468,9 +481,12 @@ void ID(Program* myProgram, Processor* myProcessor)
 		strcpy(myProcessor->ID_EX.rs, rs);
 		myProcessor->ID_EX.readData1 = myProcessor->registersData[getData(rs, myProcessor)];
 		myProcessor->ID_EX.readData2 = myProcessor->registersData[getData(rt, myProcessor)];
+
 	}
 	else if(strcmp(instruction, "j") == 0)
 	{
+		if(myProcessor->stallB == 2)
+			return;
 		setUnitControl("j", myProcessor);
 		sscanf(myProcessor->instr2, "%s %s", instruction, label);
 		strcpy(myProcessor->ID_EX.rd, "0");
@@ -489,9 +505,9 @@ void ID(Program* myProgram, Processor* myProcessor)
 void EX(Program* myProgram, Processor* myProcessor)
 {
 	char instruction[64];
-	char rs[5];
-	char rt[5];
-	char rd[5];
+	char rs[10];
+	char rt[10];
+	char rd[10];
 	int inm;
 
 	sscanf(myProcessor->instr3, "%s", instruction);
@@ -549,10 +565,12 @@ void EX(Program* myProgram, Processor* myProcessor)
 	
 	else if(strcmp(instruction, "beq") == 0)
 	{
+		printf("BEEEEEEEEEEEEEQ CT;MDASDASIDASJFASJ\n");
 		char label[64];
 		strcpy(label, myProcessor->ID_EX.labelBranch);
 		myProcessor->EX_MEM.ALUresult = 0;
 		strcpy(myProcessor->EX_MEM.MuxRegDst, "0");
+		printf("%i vs %i \n", myProcessor->ID_EX.readData1, myProcessor->ID_EX.readData2);
 		if (myProcessor->ID_EX.readData1 == myProcessor->ID_EX.readData2)
 		{
 			myProcessor->stallB = 2;
@@ -562,6 +580,8 @@ void EX(Program* myProgram, Processor* myProcessor)
 			myProcessor->EX_MEM.zero = 1;
 			strcpy(myProcessor->EX_MEM.rd, "0");
 			strcpy(myProcessor->EX_MEM.rd, "0");
+			strcpy(myProcessor->instr4, "NONE");
+			strcpy(myProcessor->instr5, "NONE");
 			strcat(label, ":");
 			goToLabel(myProgram, myProcessor, label);
 		}
@@ -572,9 +592,9 @@ void EX(Program* myProgram, Processor* myProcessor)
 void MEM(Processor* myProcessor)
 {
 	char instruction[64];
-	char rs[5];
-	char rt[5];
-	char rd[5];
+	char rs[10];
+	char rt[10];
+	char rd[10];
 	int inm;
 
 	sscanf(myProcessor->instr4, "%s", instruction);
@@ -617,6 +637,10 @@ void WB(Processor* myProcessor)
 	return: intrucción en la que hay hazard de control. */
 char* hazardData(Processor* myProcessor)
 {
+	printf(ANSI_COLOR_BLUE"Verificando Hazard de datos...\nID_EX: %s\nEX_MEM: %s\nMEM_WB: %s\n" ANSI_COLOR_RESET, myProcessor->ID_EX.inst, myProcessor->EX_MEM.inst, myProcessor->MEM_WB.inst);
+	printf("ID_EX -> rs: %s, rt: %s\n", myProcessor->ID_EX.rs, myProcessor->ID_EX.rt);
+	printf("EX_MEM-> regWrite: %c, MuxRegDst: %s\n", myProcessor->EX_MEM.uc.RegWrite, myProcessor->EX_MEM.MuxRegDst);
+	printf("MEM_WB-> regWrite: %c, MuxRegDst: %s\n\n", myProcessor->MEM_WB.uc.RegWrite, myProcessor->MEM_WB.MuxRegDst);
 	if(strcmp(myProcessor->EX_MEM.inst, "EOF") == 0 || strcmp(myProcessor->ID_EX.inst, "EOF") == 0 || 
 	   strcmp(myProcessor->EX_MEM.inst, "NONE") == 0 || strcmp(myProcessor->ID_EX.inst, "NONE") == 0 ||
 	   strcmp(myProcessor->EX_MEM.inst, "NOP") == 0 || strcmp(myProcessor->ID_EX.inst, "NOP") == 0 ||
@@ -625,23 +649,27 @@ char* hazardData(Processor* myProcessor)
 
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rs) == 0)
 	{
+		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData1 = myProcessor->EX_MEM.ALUresult;
-		return myProcessor->ID_EX.rs;
+		//return myProcessor->ID_EX.rs;
 	}
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rt) == 0)
 	{
+		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData2 = myProcessor->EX_MEM.ALUresult;
-		return myProcessor->ID_EX.rt;
+		//return myProcessor->ID_EX.rt;
 	}
 	if(myProcessor->MEM_WB.uc.RegWrite == '1' && strcmp(myProcessor->MEM_WB.MuxRegDst, myProcessor->ID_EX.rs) == 0)
 	{
+		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData1 = myProcessor->MEM_WB.ALUresult;
-		return myProcessor->ID_EX.rs;
+		//return myProcessor->ID_EX.rs;
 	}
 	if(myProcessor->MEM_WB.uc.RegWrite == '1' && strcmp(myProcessor->MEM_WB.MuxRegDst, myProcessor->ID_EX.rt) == 0)
 	{
+		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData2 = myProcessor->MEM_WB.ALUresult;
-		return myProcessor->ID_EX.rt;
+		//return myProcessor->ID_EX.rt;
 	}
 	return NULL;
 }
@@ -767,10 +795,11 @@ void applyFlush(Processor* myProcessor)
 		}
 		else if(strcmp(myProcessor->hazardControl->content[i], "j") == 0)
 		{
-			strcpy(myProcessor->IFlist->content[i-2], "FLUSH");
-			strcpy(myProcessor->IDlist->content[i-1], "FLUSH");
-			strcpy(myProcessor->EXlist->content[i], "FLUSH");
-			strcpy(myProcessor->WBlist->content[i+1], "FLUSH");
+			strcpy(myProcessor->IFlist->content[i-1], "FLUSH");
+			strcpy(myProcessor->IDlist->content[i], "FLUSH");
+			strcpy(myProcessor->EXlist->content[i+1], "FLUSH");
+			strcpy(myProcessor->MEMlist->content[i+2], "FLUSH");
+			strcpy(myProcessor->WBlist->content[i+3], "FLUSH");
 		}
 	}
 }
@@ -832,7 +861,7 @@ void start(Program* myProgram)
 			flag = 0;	
 		}
 		else if(myProcessor->stallB == 1 || myProcessor->stallB == 2)
-		{
+		{	
 			char aux[5];
 			if(myProcessor->stallB == 1)
 				strcpy(aux, "j");
@@ -863,11 +892,15 @@ void start(Program* myProgram)
 		}
 		else 
 		{
+
 			WB(myProcessor);
 			MEM(myProcessor);
 			EX(myProgram, myProcessor);
 			ID(myProgram, myProcessor);
 			IF(myProgram, myProcessor);	
+
+			hd = hazardData(myProcessor);
+
 
 			append(myProcessor->IFlist, myProcessor->instr1);
 			append(myProcessor->IDlist, myProcessor->instr2);
@@ -875,7 +908,6 @@ void start(Program* myProgram)
 			append(myProcessor->MEMlist, myProcessor->instr4);
 			append(myProcessor->WBlist, myProcessor->instr5);
 
-			hd = hazardData(myProcessor);
 
 			strcpy(finish, myProcessor->instr5);
 			strcpy(myProcessor->instr5, myProcessor->instr4);
@@ -892,13 +924,8 @@ void start(Program* myProgram)
 				myProcessor->cycle++;
 			}
 		}
-		printf("\n");
-		printf("----------------\n");
-		printf("\n>IF:  %s\n", myProcessor->instr1);
-		printf(">ID:  %s\n", myProcessor->instr2);
-		printf(">EX:  %s\n", myProcessor->instr3);
-		printf(">MEM: %s\n", myProcessor->instr4);
-		printf(">WB:  %s\n", myProcessor->instr5);
+		printf("%s\n", myProcessor->instr1);
+		printRegisters(myProcessor);
 	}
 	while(strcmp(finish, "EOF") != 0);
 	myProcessor->IFlist = removeTrash(myProcessor->IFlist);
