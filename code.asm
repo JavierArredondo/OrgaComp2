@@ -1,7 +1,8 @@
-add $t0, $t7, $t0
-addi $t2, $t2, 7
-beq $t0, $t2, PICO
-add $t1, $t0, $t2
-add $t1, $t0, $t2
-PICO:
-add $t0, $t0, $t0
+ENTRY:
+addi $t0, $zero, 0
+addi $t1, $zero, 0
+beq $t0, $zero, EXIT
+j ENTRY
+add $t0, $t7, $t2
+EXIT:
+add $t6, $t7, $t2

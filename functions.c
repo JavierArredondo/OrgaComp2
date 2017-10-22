@@ -51,6 +51,9 @@ int* initRegisterData(Program* myProgram)
 		fscanf(myProgram->registerFile, "%s %i\n", strAux, &registers[i]);
 	return registers;
 }
+/*	Función que inicializa la estructura UnitControl seteadas en cero.
+	return: Estructura UnitControl.
+*/
 UnitControl initUnitControl()
 {
 	UnitControl uc;
@@ -66,6 +69,10 @@ UnitControl initUnitControl()
 	uc.RegWrite = '0';
 	return uc;
 }
+/*	Función que inicializa un Processor, con sus datos seteados en cero o convenciones que simulan nada.
+	myProgram: Programa al cual se quiere leer los registros.
+	return: puntero a Processor.
+*/
 Processor* initProcessor(Program* myProgram)
 {
 	Processor* myProcessor = (Processor*)malloc(sizeof(Processor));
@@ -115,6 +122,9 @@ Program* initProgram(FILE* firstFile, FILE* secFile, FILE* thirdFile, FILE* four
 	myProgram->hazardFile = fourthFile;
 	return myProgram;
 }
+/*	Función que inicializa los valores de un Buffer en cero, o conveciones que representan un valor nulo.
+	return: estructura Buffer.
+*/
 Buffer initBuffer()
 {
 	Buffer myBuffer;
@@ -135,12 +145,16 @@ Buffer initBuffer()
 	myBuffer.uc = initUnitControl();
 	return myBuffer;
 }
+/*	Función que inicializa una List. Esta funciona igual que una lista.
+	return: Puntero a List
+*/ 
 List* initList()
 {
 	List* myList = (List*)malloc(sizeof(List));
 	myList->size = 0;
 	myList->content = NULL;
 }
+/*	Procedimiento que agrega un elemento a la lista List. Agrega el elemento al final de la lista. */
 void append(List* myList, char* element)
 {
 	if(myList->size == 0)
@@ -157,9 +171,14 @@ void append(List* myList, char* element)
 	}
 	myList->size++;
 }
+/*	Procedimiento que saca el útimo valor de la lista.
+	return: Último elemento de la lista,
+*/
 char* pop(List* myList)
 {
 	int max = myList->size - 1;
+	if(max < 0)
+		return NULL;
 	char* aux = (char*)malloc(sizeof(char)*30);
 	strcpy(aux, myList->content[max]);
 	myList->content = (char**)realloc(myList->content, max * sizeof(char*));
@@ -178,6 +197,11 @@ int getIndex(char* myRegister, Processor* myProcessor)
 			return i;
 	return -1;
 }
+/* 	Función que dado un registro, obtiene el valor de dicho registro, por ejemplo puede calcular el valor que hay en 
+	$t0.
+	myRegister: registro a consultar.
+	myProcessor: de donde saca el registro.
+	return: valor que hay en el registro.*/
 int getData(char* myRegister, Processor* myProcessor)
 {
 	return myProcessor->registersData[getIndex(myRegister, myProcessor)];
@@ -210,7 +234,10 @@ void printRegisters(Processor* myProcessor)
 		printf("%s: %d\n", myProcessor->registersName[i], myProcessor->registersData[i]);
 	printf("\n");
 }
-
+/*	Función que setea una estructura UnitControl con sus respectivas unidades de control.
+	a's: Valores de las líneas de control.
+	return: Unidad de control con lo valores deseados. 
+*/
 UnitControl changeUnitControl(char a1, char a2, char a3, char a4, char a5, char* a6, char a7, char a8, char a9)
 {
 	UnitControl myUnitControl;
@@ -226,6 +253,10 @@ UnitControl changeUnitControl(char a1, char a2, char a3, char a4, char a5, char*
 	myUnitControl.RegWrite = a9;
 	return myUnitControl;
 }
+/*	Procedimiento que setea la unidad de control respecto a una intrucción.
+	instr: Intrucción a setear.
+	myProcessor: Procesador en el cual está la unidad de control. 
+*/
 void setUnitControl(char* instr, Processor* myProcessor)
 {
 
@@ -243,9 +274,12 @@ void setUnitControl(char* instr, Processor* myProcessor)
 		myProcessor->uc = changeUnitControl('1', '0', '0', '0', '0', "01", '0', '1', '1');
 	else if(strcmp(instr, "j") == 0)
 		myProcessor->uc = changeUnitControl(myProcessor->uc.RegDst, '0', '0', '0', myProcessor->uc.MemToReg, myProcessor->uc.ALUOp, '0', myProcessor->uc.ALUSrc, '0');
-	//else
-	//	changeUnitControl('0', '0', '0', '0', '0', "00", '0', '0', '0', &myProcessor->uc);
+	else
+		myProcessor->uc = changeUnitControl('0', '0', '0', '0', '0', "00", '0', '0', '0');
 }
+/* 	Función que realiza una copia de la unidad de control.
+	u: Unidad de control a copiar.
+	return: Nueva unidad de control con valores copiados de u.*/
 UnitControl copyUnitControl(UnitControl u)
 {
 	UnitControl myUnitControl; 
@@ -261,6 +295,10 @@ UnitControl copyUnitControl(UnitControl u)
 	myUnitControl.RegWrite = u.RegWrite;
 	return myUnitControl;
 }
+/*	Procedimiento que copia un buffer.
+	myBuffer: Buffer a copiar.
+	b2: Buffer de destino.
+*/
 void copyBuffer(Buffer* myBuffer, Buffer b2)
 {
 	strcpy(myBuffer->inst, b2.inst);
@@ -278,9 +316,22 @@ void copyBuffer(Buffer* myBuffer, Buffer b2)
 	myBuffer->ADDresult = b2.ADDresult;
 	myBuffer->zero = b2.zero;
 }
+// 	Etapas del camino de datos:
+/* 	Para manejar cada etapa, se ha trabajado de forma conveniente para el desarrollador, se ha relacionado cada etapa con una instrucción:
+	IF->  instr1.
+	ID->  instr2.
+	EX->  instr3.
+	MEM-> instr4.
+	WB->  instr5.
+	En IF se lee una instrucción desde el archivo, en el resto de las etapas se procesa la instrucción correspondiente. Luego, se cambia de instrucción
+	instr5->instr4
+	instr4->instr3
+	instr3->instr2
+	instr2->instr1
+	De esta manera se simula el Pipeline.
 
-
-// Etapas del camino de datos:
+/*	Procedimiento que rescata la instrucción a procesar. Para esto se va leyendo el archivo instrucción a instrucción, en caso de termninar de leer el archivo
+	se setea EOF a la intrucción 1.*/
 void IF(Program* myProgram, Processor* myProcessor)
 {
 	char instruction[64];
@@ -347,14 +398,8 @@ void IF(Program* myProgram, Processor* myProcessor)
 	}
 	else
 		strcpy(myProcessor->instr1, "EOF");
-	printf(ANSI_COLORBG_CYAN"\nEN IF\n"ANSI_COLOR_RESET);
-	printf("IF: %s\n", myProcessor->instr1);
-	printf("ID: %s\n", myProcessor->instr2);
-	printf("EX: %s\n", myProcessor->instr3);
-	printf("MEM: %s\n", myProcessor->instr4);
-	printf("WB: %s\n", myProcessor->instr5);
 }
-
+/*	Procedimiento que simlua etapa ID, setea la unidad de control con los valores correspondientes.*/
 void ID(Program* myProgram, Processor* myProcessor)
 {
 	char instruction[64];
@@ -367,16 +412,7 @@ void ID(Program* myProgram, Processor* myProcessor)
 
 	sscanf(myProcessor->instr2, "%s", instruction);
 	strcpy(myProcessor->ID_EX.inst, instruction);
-	printf(ANSI_COLORBG_CYAN"\nEN ID\n"ANSI_COLOR_RESET);
-	printf("IF: %s\n", myProcessor->instr1);
-	printf("ID: %s\n", myProcessor->instr2);
-	printf("EX: %s\n", myProcessor->instr3);
-	printf("MEM: %s\n", myProcessor->instr4);
-	printf("WB: %s\n", myProcessor->instr5);
-	if(strcmp(myProcessor->instr1, "NOP") == 0)
-	{
-		printf("No debo ejecutar...\n");
-	}
+
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "FLUSH") == 0)
 		return;
 	else if(strcmp(myProcessor->instr1, "EOF") == 0)
@@ -388,7 +424,6 @@ void ID(Program* myProgram, Processor* myProcessor)
 	if(strcmp(instruction, "add") == 0 || strcmp(instruction, "sub") == 0 || strcmp(instruction, "mul") == 0 || strcmp(instruction, "div") == 0)
 	{
 		char aux[20];
-		//printf("Seteando: %s\n", instruction);
 		setUnitControl(instruction, myProcessor);
 		copyBuffer(&myProcessor->ID_EX, myProcessor->IF_ID); //
 		myProcessor->ID_EX.readData1 = getData(myProcessor->ID_EX.rs, myProcessor); //
@@ -398,7 +433,6 @@ void ID(Program* myProgram, Processor* myProcessor)
 	}
 	else if(strcmp(instruction, "addi") == 0 || strcmp(instruction, "subi") == 0)
 	{
-		//printf("Seteando: %s\n", instruction);
 		setUnitControl(instruction, myProcessor);
 		copyBuffer(&myProcessor->ID_EX, myProcessor->IF_ID); //
 		myProcessor->ID_EX.readData1 = getData(myProcessor->ID_EX.rs, myProcessor); //
@@ -408,7 +442,6 @@ void ID(Program* myProgram, Processor* myProcessor)
 	}
 	else if(strcmp(instruction, "lw") == 0)
 	{
-		//printf("Seteando: %s\n", instruction);
 		setUnitControl(instruction, myProcessor);
 		copyBuffer(&myProcessor->ID_EX, myProcessor->IF_ID); //
 		myProcessor->ID_EX.readData1 = getData(myProcessor->ID_EX.rs, myProcessor); //
@@ -427,7 +460,6 @@ void ID(Program* myProgram, Processor* myProcessor)
 	}
 	else if(strcmp(instruction, "beq") == 0)
 	{
-		//printf("Seteando: %s", instruction);
 		setUnitControl("beq", myProcessor);
 		sscanf(myProcessor->instr2, "%s %[^','], %[^','], %s", instruction, rs, rt, label);
 		strcpy(myProcessor->ID_EX.labelBranch, label);
@@ -453,6 +485,7 @@ void ID(Program* myProgram, Processor* myProcessor)
 		myProcessor->stallB = 1;
 	}
 }
+/*	Procedimiento que simula etapa EX. Realiza la ejecución de la instrucción seteada. */
 void EX(Program* myProgram, Processor* myProcessor)
 {
 	char instruction[64];
@@ -464,13 +497,6 @@ void EX(Program* myProgram, Processor* myProcessor)
 	sscanf(myProcessor->instr3, "%s", instruction);
 	strcpy(myProcessor->EX_MEM.inst, myProcessor->instr3);
 
-	printf(ANSI_COLORBG_CYAN"\nEN EX\n"ANSI_COLOR_RESET);
-	printf("IF: %s\n", myProcessor->instr1);
-	printf("ID: %s\n", myProcessor->instr2);
-	printf("EX: %s\n", myProcessor->instr3);
-	printf("MEM: %s\n", myProcessor->instr4);
-	printf("WB: %s\n", myProcessor->instr5);
-
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "FLUSH") == 0)
 	{
 		return;
@@ -480,7 +506,6 @@ void EX(Program* myProgram, Processor* myProcessor)
 		strcpy(myProcessor->EX_MEM.inst, "EOF");
 		return;
 	}
-
 
 	copyBuffer(&myProcessor->EX_MEM, myProcessor->ID_EX);
 
@@ -530,7 +555,6 @@ void EX(Program* myProgram, Processor* myProcessor)
 		strcpy(myProcessor->EX_MEM.MuxRegDst, "0");
 		if (myProcessor->ID_EX.readData1 == myProcessor->ID_EX.readData2)
 		{
-			printf(ANSI_COLOR_GREEN "HAY HAZARD DE CONTROL\n" ANSI_COLOR_RESET);
 			myProcessor->stallB = 2;
 			myProcessor->EX_MEM.readData1 = 0;
 			myProcessor->EX_MEM.readData2 = 0;
@@ -542,16 +566,9 @@ void EX(Program* myProgram, Processor* myProcessor)
 			goToLabel(myProgram, myProcessor, label);
 		}
 	}
-	UnitControl u = myProcessor->ID_EX.uc;
-	myProcessor->EX_MEM.uc.RegDst = u.RegDst;;
-	myProcessor->EX_MEM.uc.Jump = u.Jump;
-	myProcessor->EX_MEM.uc.Branch = u.Branch;
-	myProcessor->EX_MEM.uc.MemRead = u.MemRead;
-	myProcessor->EX_MEM.uc.MemToReg = u.MemToReg;
-	myProcessor->EX_MEM.uc.MemWrite = u.MemWrite;
-	myProcessor->EX_MEM.uc.ALUSrc = u.ALUSrc;
-	myProcessor->EX_MEM.uc.RegWrite = u.RegWrite;
+	myProcessor->EX_MEM.uc = copyUnitControl(myProcessor->ID_EX.uc);
 }
+/* Procedimiento que simula etapa MEM. Guarda o carga dato que está en memoria.*/
 void MEM(Processor* myProcessor)
 {
 	char instruction[64];
@@ -563,13 +580,6 @@ void MEM(Processor* myProcessor)
 	sscanf(myProcessor->instr4, "%s", instruction);
 	strcpy(myProcessor->EX_MEM.inst, myProcessor->instr4);
 	
-	printf(ANSI_COLORBG_CYAN"\nEN MEM\n"ANSI_COLOR_RESET);
-	printf("IF: %s\n", myProcessor->instr1);
-	printf("ID: %s\n", myProcessor->instr2);
-	printf("EX: %s\n", myProcessor->instr3);
-	printf("MEM: %s\n", myProcessor->instr4);
-	printf("WB: %s\n", myProcessor->instr5);
-
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "EOF") == 0 || strcmp(instruction, "FLUSH") == 0)
 		return;
 
@@ -585,29 +595,15 @@ void MEM(Processor* myProcessor)
 		int pointer = myProcessor->EX_MEM.ALUresult / 4;
 		myProcessor->MEM_WB.loadData = myProcessor->stack[pointer];
 	}
-	UnitControl u = myProcessor->EX_MEM.uc;
-	myProcessor->MEM_WB.uc.RegDst = u.RegDst;;
-	myProcessor->MEM_WB.uc.Jump = u.Jump;
-	myProcessor->MEM_WB.uc.Branch = u.Branch;
-	myProcessor->MEM_WB.uc.MemRead = u.MemRead;
-	myProcessor->MEM_WB.uc.MemToReg = u.MemToReg;
-	myProcessor->MEM_WB.uc.MemWrite = u.MemWrite;
-	myProcessor->MEM_WB.uc.ALUSrc = u.ALUSrc;
-	myProcessor->MEM_WB.uc.RegWrite = u.RegWrite;
+	myProcessor->MEM_WB.uc = copyUnitControl(myProcessor->EX_MEM.uc);
 }
+/* Procedimiento que simula etapa WB. Escribe en un registro de destino.*/
 void WB(Processor* myProcessor)
 {
 	char instruction[64];
 
 	sscanf(myProcessor->instr5, "%s", instruction);
 	strcpy(myProcessor->EX_MEM.inst, myProcessor->instr5);
-	
-	printf(ANSI_COLORBG_CYAN"\nEN WB\n" ANSI_COLOR_RESET);
-	printf("IF: %s\n", myProcessor->instr1);
-	printf("ID: %s\n", myProcessor->instr2);
-	printf("EX: %s\n", myProcessor->instr3);
-	printf("MEM: %s\n", myProcessor->instr4);
-	printf("WB: %s\n", myProcessor->instr5);
 
 	if(strcmp(instruction, "NONE") == 0 || strcmp(instruction, "NOP") == 0 || strcmp(instruction, "EOF") == 0 || strcmp(instruction, "FLUSH") == 0)
 		return;
@@ -616,12 +612,15 @@ void WB(Processor* myProcessor)
 	else if(strcmp(instruction, "lw") == 0)
 		myProcessor->registersData[getIndex(myProcessor->MEM_WB.MuxRegDst, myProcessor)] = myProcessor->MEM_WB.loadData;
 }
-
+/* 	Función que retorna la instrucción, en caso de haber hazard de dato, de modo contrario retorna NULL
+	myProcessor: Prcocesador al cual se quiere saber si existe hazard de dato.
+	return: intrucción en la que hay hazard de control. */
 char* hazardData(Processor* myProcessor)
 {
-	//printf(ANSI_COLOR_BLUE"Verificando Hazard de datos...\nID_EX: %s\nEX_MEM: %s\n" ANSI_COLOR_RESET, myProcessor->ID_EX.inst, myProcessor->EX_MEM.inst);
-	if(strcmp(myProcessor->EX_MEM.inst, "EOF") == 0 || strcmp(myProcessor->ID_EX.inst, "EOF") == 0 ||
-	   strcmp(myProcessor->EX_MEM.inst, "sw") == 0)
+	if(strcmp(myProcessor->EX_MEM.inst, "EOF") == 0 || strcmp(myProcessor->ID_EX.inst, "EOF") == 0 || 
+	   strcmp(myProcessor->EX_MEM.inst, "NONE") == 0 || strcmp(myProcessor->ID_EX.inst, "NONE") == 0 ||
+	   strcmp(myProcessor->EX_MEM.inst, "NOP") == 0 || strcmp(myProcessor->ID_EX.inst, "NOP") == 0 ||
+	   strcmp(myProcessor->EX_MEM.inst, "FLUSH") == 0 || strcmp(myProcessor->ID_EX.inst, "FLUSH") == 0)
 		return NULL;
 
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rs) == 0)
@@ -646,7 +645,22 @@ char* hazardData(Processor* myProcessor)
 	}
 	return NULL;
 }
-
+/*	Función que verifica si hay hazard de control.
+	myProcessor: Procesador al cual se quiere sabe si hay hazard de control.
+	return: instrucción en caso de que exista hazard de control.*/
+char* hazardControl(Processor* myProcessor)
+{
+	if(strcmp(myProcessor->ID_EX.inst, "j") == 0)
+		return "j";
+	else if(strcmp(myProcessor->EX_MEM.inst, "beq") == 0 || myProcessor->stallB == 2)
+		return "beq";
+	else
+		return NULL;
+}
+/* 	Procedimiento que realiza la impresión de los resultados a CSV.
+	myFile: Archivo de destino de escritura.
+	myList: Lista que se quiere imprimir.
+	title: Convención de nombre representativo para la fila.*/ 
 void printfListCSV(FILE* myFile, List* myList, char* title)
 {
 	int i;
@@ -659,7 +673,9 @@ void printfListCSV(FILE* myFile, List* myList, char* title)
 			fprintf(myFile, "%s;", myList->content[i]);
 	}
 }
-
+/*	Procedimiento que recopila los datos necesarios para efectuar la impresión de la salida.
+	myProgram: Estructura que contiene los archivos de salida.
+	myProcessor: Estructura que contiene los resultados. */
 void printOut(Program* myProgram, Processor* myProcessor)
 {
 	// Impresión para csv de las etapas
@@ -680,16 +696,18 @@ void printOut(Program* myProgram, Processor* myProcessor)
 	fclose(myProgram->traceFile);
 	fclose(myProgram->hazardFile);
 }
-
+/*	Función que efectúa una espera
+	myProcessor: Procesador al cual se realiza una espera.
+	return: 0 si no hay espera, 1 si hay espera.*/
 int NOP(Processor* myProcessor)
 {
 	if(myProcessor->ID_EX.uc.MemRead == '1' && (strcmp(myProcessor->ID_EX.rt, myProcessor->IF_ID.rs) == 0 || strcmp(myProcessor->ID_EX.rt, myProcessor->IF_ID.rt) == 0))
-	{
 		return 1; // Hacer NOP
-	}
 	return 0;
 }
-
+/*	Función que elimina contenido inservible de las listas.
+	myList: Lista con valores innesesarios.
+	return: Lista limpia.*/
 List* removeTrash(List* myList)
 {
 	int i;
@@ -712,39 +730,71 @@ List* removeTrash(List* myList)
 		append(myList, aux->content[i]);
 	return myList;
 }
-
+/* 	Procedimiento que respalda los valores de los registros.
+	myProcessor: Estructura que contiene valor de los registros.*/
 void copyRegisters(Processor* myProcessor)
 {
 	int i;
 	for(i = 0; i < 32; i++)
 		myProcessor->previewData[i] = myProcessor->registersData[i];
 }
-
+/* Procedimiento que vuelve a lso datos respaldados.*/
 void backRegisters(Processor* myProcessor)
 {
 	int i;
 	for(i = 0; i < 32; i++)
 		myProcessor->registersData[i] = myProcessor->previewData[i];
 }
-
+/*	Procedimiento que aplica FLUSH a la lista de salida de hazard de control.
+	myProcessor: Procesador al cual se le aplciará el FLUSH. */
+void applyFlush(Processor* myProcessor)
+{
+	int i;
+	for(i = 0; i < myProcessor->hazardControl->size; i++)
+	{
+		if(strcmp(myProcessor->hazardControl->content[i], "beq") == 0)
+		{
+			strcpy(myProcessor->IFlist->content[i-2], "FLUSH");
+			strcpy(myProcessor->IFlist->content[i-1], "FLUSH");
+			strcpy(myProcessor->IDlist->content[i-1], "FLUSH");
+			strcpy(myProcessor->IDlist->content[i], "FLUSH");
+			strcpy(myProcessor->EXlist->content[i], "FLUSH");
+			strcpy(myProcessor->EXlist->content[i+1], "FLUSH");
+			strcpy(myProcessor->MEMlist->content[i+1], "FLUSH");
+			strcpy(myProcessor->MEMlist->content[i+2], "FLUSH");
+			strcpy(myProcessor->WBlist->content[i+2], "FLUSH");
+			strcpy(myProcessor->WBlist->content[i+3], "FLUSH");
+		}
+		else if(strcmp(myProcessor->hazardControl->content[i], "j") == 0)
+		{
+			strcpy(myProcessor->IFlist->content[i-2], "FLUSH");
+			strcpy(myProcessor->IDlist->content[i-1], "FLUSH");
+			strcpy(myProcessor->EXlist->content[i], "FLUSH");
+			strcpy(myProcessor->WBlist->content[i+1], "FLUSH");
+		}
+	}
+}
+/*	Procedimiento que realiza el comienzo del pipeline, finaliza imprimiendo el resultado de los datos. 
+	myProgram: Estructura que contiene los archivos de entrada y salidas.*/
 void start(Program* myProgram)
 {
 	Processor* myProcessor = initProcessor(myProgram);
 	char* finish = (char*)malloc(sizeof(char)*64);
 	char* hd = (char*)malloc(sizeof(char)*5);
+	char* hc = (char*)malloc(sizeof(char)*5);
 	int nop = 0;
 	int flag = 0;
 	do
 	{
 		printf("____________________\n");
 		printf(ANSI_COLORBG_GREEN"Ciclo: %i\n"ANSI_COLOR_RESET, myProcessor->cycle);
-		WB(myProcessor);
-		MEM(myProcessor);
-		EX(myProgram, myProcessor);
-		ID(myProgram, myProcessor);
-
+		nop = NOP(myProcessor);
 		if(nop == 1)
 		{
+			WB(myProcessor);
+			MEM(myProcessor);
+			EX(myProgram, myProcessor);
+			ID(myProgram, myProcessor);
 			append(myProcessor->hazardData, "-");
 			append(myProcessor->hazardControl, "-");
 			append(myProcessor->nopList, myProcessor->instr1);
@@ -779,31 +829,20 @@ void start(Program* myProgram)
 			strcpy(myProcessor->instr4, myProcessor->instr3);
 			strcpy(myProcessor->instr3, myProcessor->instr2);
 			strcpy(myProcessor->instr2, myProcessor->instr1);
-			flag = 0;
+			flag = 0;	
 		}
 		else if(myProcessor->stallB == 1 || myProcessor->stallB == 2)
 		{
-			append(myProcessor->hazardControl, "X");
+			char aux[5];
+			if(myProcessor->stallB == 1)
+				strcpy(aux, "j");
+			else
+				strcpy(aux, "beq");
+			append(myProcessor->hazardControl, aux);
 			append(myProcessor->hazardData, "-");
-			if(myProcessor->stallB == 2)
-				strcpy(myProcessor->instr2, "FLUSH");
-			strcpy(myProcessor->instr1, "FLUSH");
-			append(myProcessor->IFlist, myProcessor->instr1);
-			append(myProcessor->IDlist, myProcessor->instr2);
-			append(myProcessor->EXlist, myProcessor->instr3);
-			append(myProcessor->MEMlist, myProcessor->instr4);
-			append(myProcessor->WBlist, myProcessor->instr5);
-			strcpy(finish, myProcessor->instr5);
-			strcpy(myProcessor->instr5, myProcessor->instr4);
-			strcpy(myProcessor->instr4, myProcessor->instr3);
-			strcpy(myProcessor->instr3, myProcessor->instr2);
-			strcpy(myProcessor->instr2, myProcessor->instr1);
-			myProcessor->stallB = 0;
+			
 			myProcessor->cycle++;
-		}
-		else 
-		{
-			IF(myProgram, myProcessor);	
+
 			append(myProcessor->IFlist, myProcessor->instr1);
 			append(myProcessor->IDlist, myProcessor->instr2);
 			append(myProcessor->EXlist, myProcessor->instr3);
@@ -815,7 +854,34 @@ void start(Program* myProgram)
 			strcpy(myProcessor->instr4, myProcessor->instr3);
 			strcpy(myProcessor->instr3, myProcessor->instr2);
 			strcpy(myProcessor->instr2, myProcessor->instr1);
+			myProcessor->uc = initUnitControl();
+			myProcessor->IF_ID = initBuffer();
+			myProcessor->ID_EX = initBuffer();
+			myProcessor->EX_MEM = initBuffer();
+			myProcessor->MEM_WB = initBuffer();
+			myProcessor->stallB = 0;
+		}
+		else 
+		{
+			WB(myProcessor);
+			MEM(myProcessor);
+			EX(myProgram, myProcessor);
+			ID(myProgram, myProcessor);
+			IF(myProgram, myProcessor);	
+
+			append(myProcessor->IFlist, myProcessor->instr1);
+			append(myProcessor->IDlist, myProcessor->instr2);
+			append(myProcessor->EXlist, myProcessor->instr3);
+			append(myProcessor->MEMlist, myProcessor->instr4);
+			append(myProcessor->WBlist, myProcessor->instr5);
+
 			hd = hazardData(myProcessor);
+
+			strcpy(finish, myProcessor->instr5);
+			strcpy(myProcessor->instr5, myProcessor->instr4);
+			strcpy(myProcessor->instr4, myProcessor->instr3);
+			strcpy(myProcessor->instr3, myProcessor->instr2);
+			strcpy(myProcessor->instr2, myProcessor->instr1);
 			if (strcmp(finish, "EOF") != 0)
 			{
 				if(hd == NULL)
@@ -826,18 +892,22 @@ void start(Program* myProgram)
 				myProcessor->cycle++;
 			}
 		}
-		nop = NOP(myProcessor);
+		printf("\n");
+		printf("----------------\n");
+		printf("\n>IF:  %s\n", myProcessor->instr1);
+		printf(">ID:  %s\n", myProcessor->instr2);
+		printf(">EX:  %s\n", myProcessor->instr3);
+		printf(">MEM: %s\n", myProcessor->instr4);
+		printf(">WB:  %s\n", myProcessor->instr5);
 	}
 	while(strcmp(finish, "EOF") != 0);
-
 	myProcessor->IFlist = removeTrash(myProcessor->IFlist);
 	myProcessor->IDlist = removeTrash(myProcessor->IDlist);
 	myProcessor->EXlist = removeTrash(myProcessor->EXlist);
 	myProcessor->MEMlist = removeTrash(myProcessor->MEMlist);
 	myProcessor->WBlist = removeTrash(myProcessor->WBlist);
-
-	printRegisters(myProcessor);
+	applyFlush(myProcessor);
 	printOut(myProgram, myProcessor);
 	fclose(myProgram->instFile);
 	fclose(myProgram->registerFile);
-}
+} 

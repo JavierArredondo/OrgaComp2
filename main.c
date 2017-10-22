@@ -6,14 +6,14 @@
 int main()
 {
 	Program* myProgram;
-	//Processor* myProcessor;
 	char nameInstruction[40];
 	char nameRegister[40];
 	char nameOutFile[40];
+	char nameOutFile2[40];
 	FILE* fileInstr;
 	FILE* fileControlLine;
-	FILE* fileOut;
-	FILE* fileOut2;
+	FILE* fileOut = NULL;
+	FILE* fileOut2 = NULL;
 	int option;
 	do
 	{
@@ -26,7 +26,7 @@ int main()
 			/* Primero se pide un archivo válido para la ejecución del programa, si este no existe, se pedrirá un nuevo archivo. */
 			printf("\nIngrese el nombre del archivo que posee las instrucciones del programa: ");
 			scanf("%s", nameInstruction);
-			fileInstr = inDirectory("ejemploMips1.asm");
+			fileInstr = inDirectory(nameInstruction);
 			while(!fileInstr)
 			{
 				printf(ANSI_COLOR_RED "\nNo existe tal archivo. Ingrese uno valido: " ANSI_COLOR_RESET);
@@ -36,7 +36,7 @@ int main()
 			/*Luego se pide el segundo archivo, se repite el proceso anterior si es que este no existe. */
 			printf("Ingrese el nombre del archivo que posee los registros: ");
 			scanf("%s", nameRegister);
-			fileControlLine = inDirectory("inputRegistros.txt");
+			fileControlLine = inDirectory(nameRegister);
 			while(!fileControlLine)
 			{
 				printf(ANSI_COLOR_RED "\nNo existe tal archivo. Ingrese uno valido: " ANSI_COLOR_RESET);
@@ -45,14 +45,14 @@ int main()
 			}
 			printf("Ingrese el nombre del archivo de salida que desee (sin extension): ");
 			scanf("%s", nameOutFile);
+			strcpy(nameOutFile2, nameOutFile);
 			printf("\n");
-			strcat(nameOutFile,".csv");
-			fileOut = fopen("asd.csv", "w");
-			fileOut2 = fopen("asd2.csv", "w");
+			strcat(nameOutFile,"Salida1.csv");
+			fileOut = fopen(nameOutFile, "w");
+			strcat(nameOutFile2,"Salida2.csv");
+			fileOut2 = fopen(nameOutFile2, "w");
 			myProgram = initProgram(fileInstr, fileControlLine, fileOut, fileOut2);
 			start(myProgram);
-			//myProcessor = initProcessor(myProgram);
-			//readMips(myProgram, myProcessor);	
 		}
 		else if(option == 2)
 		{
