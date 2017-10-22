@@ -180,9 +180,9 @@ char* pop(List* myList)
 		return NULL;
 	char* aux = (char*)malloc(sizeof(char)*30);
 	strcpy(aux, myList->content[max]);
-	myList->content = (char**)realloc(myList->content, max * sizeof(char*));
+	myList->content = (char**)realloc(myList->content, (max - 1) * sizeof(char*));
+	myList->size = max;
 	return aux;
-
 }
 /* Función que permite obtener el índice de un regsitro. 
    myRegister: Registro la cual se le quiere obtener su índice.
@@ -565,7 +565,6 @@ void EX(Program* myProgram, Processor* myProcessor)
 	
 	else if(strcmp(instruction, "beq") == 0)
 	{
-		printf("BEEEEEEEEEEEEEQ CT;MDASDASIDASJFASJ\n");
 		char label[64];
 		strcpy(label, myProcessor->ID_EX.labelBranch);
 		myProcessor->EX_MEM.ALUresult = 0;
@@ -580,8 +579,8 @@ void EX(Program* myProgram, Processor* myProcessor)
 			myProcessor->EX_MEM.zero = 1;
 			strcpy(myProcessor->EX_MEM.rd, "0");
 			strcpy(myProcessor->EX_MEM.rd, "0");
-			strcpy(myProcessor->instr4, "NONE");
-			strcpy(myProcessor->instr5, "NONE");
+			//strcpy(myProcessor->instr1, "FLUSH");
+			//strcpy(myProcessor->instr2, "FLUSH");
 			strcat(label, ":");
 			goToLabel(myProgram, myProcessor, label);
 		}
@@ -637,6 +636,8 @@ void WB(Processor* myProcessor)
 	return: intrucción en la que hay hazard de control. */
 char* hazardData(Processor* myProcessor)
 {
+	char* aux = (char*)malloc(sizeof(char) * 64);
+	int flag = 0;
 	printf(ANSI_COLOR_BLUE"Verificando Hazard de datos...\nID_EX: %s\nEX_MEM: %s\nMEM_WB: %s\n" ANSI_COLOR_RESET, myProcessor->ID_EX.inst, myProcessor->EX_MEM.inst, myProcessor->MEM_WB.inst);
 	printf("ID_EX -> rs: %s, rt: %s\n", myProcessor->ID_EX.rs, myProcessor->ID_EX.rt);
 	printf("EX_MEM-> regWrite: %c, MuxRegDst: %s\n", myProcessor->EX_MEM.uc.RegWrite, myProcessor->EX_MEM.MuxRegDst);
@@ -649,27 +650,32 @@ char* hazardData(Processor* myProcessor)
 
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rs) == 0)
 	{
-		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData1 = myProcessor->EX_MEM.ALUresult;
-		//return myProcessor->ID_EX.rs;
+		strcpy(aux, myProcessor->ID_EX.rs);
+		flag = 1;
 	}
 	if(myProcessor->EX_MEM.uc.RegWrite == '1' && strcmp(myProcessor->EX_MEM.MuxRegDst, myProcessor->ID_EX.rt) == 0)
 	{
-		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData2 = myProcessor->EX_MEM.ALUresult;
-		//return myProcessor->ID_EX.rt;
+		strcpy(aux, myProcessor->ID_EX.rt);
+		flag = 1;
 	}
 	if(myProcessor->MEM_WB.uc.RegWrite == '1' && strcmp(myProcessor->MEM_WB.MuxRegDst, myProcessor->ID_EX.rs) == 0)
 	{
-		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData1 = myProcessor->MEM_WB.ALUresult;
-		//return myProcessor->ID_EX.rs;
+		strcpy(aux, myProcessor->ID_EX.rs);
+		flag = 1;
 	}
 	if(myProcessor->MEM_WB.uc.RegWrite == '1' && strcmp(myProcessor->MEM_WB.MuxRegDst, myProcessor->ID_EX.rt) == 0)
 	{
-		printf("HAY FW\n\n");
 		myProcessor->ID_EX.readData2 = myProcessor->MEM_WB.ALUresult;
-		//return myProcessor->ID_EX.rt;
+		strcpy(aux, myProcessor->ID_EX.rt);
+		flag = 1;
+	}
+	if(flag == 1)
+	{
+		printf("EL HD\n");
+		return aux;
 	}
 	return NULL;
 }
@@ -828,6 +834,12 @@ void start(Program* myProgram)
 			append(myProcessor->hazardControl, "-");
 			append(myProcessor->nopList, myProcessor->instr1);
 			strcpy(myProcessor->instr1, "NOP");
+			pop(myProcessor->hazardData);
+			hd = hazardData(myProcessor);
+			if(hd == NULL)
+				append(myProcessor->hazardData, "-");
+			else
+				append(myProcessor->hazardData, hd);
 
 			append(myProcessor->IFlist, myProcessor->instr1);
 			append(myProcessor->IDlist, myProcessor->instr2);
@@ -892,7 +904,6 @@ void start(Program* myProgram)
 		}
 		else 
 		{
-
 			WB(myProcessor);
 			MEM(myProcessor);
 			EX(myProgram, myProcessor);
@@ -900,7 +911,6 @@ void start(Program* myProgram)
 			IF(myProgram, myProcessor);	
 
 			hd = hazardData(myProcessor);
-
 
 			append(myProcessor->IFlist, myProcessor->instr1);
 			append(myProcessor->IDlist, myProcessor->instr2);
@@ -925,7 +935,6 @@ void start(Program* myProgram)
 			}
 		}
 		printf("%s\n", myProcessor->instr1);
-		printRegisters(myProcessor);
 	}
 	while(strcmp(finish, "EOF") != 0);
 	myProcessor->IFlist = removeTrash(myProcessor->IFlist);
@@ -937,4 +946,4 @@ void start(Program* myProgram)
 	printOut(myProgram, myProcessor);
 	fclose(myProgram->instFile);
 	fclose(myProgram->registerFile);
-} 
+}
